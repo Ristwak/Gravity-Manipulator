@@ -25,30 +25,28 @@ public class PlayerController : MonoBehaviour
 
         if (isGrounded && velocity.y < 0)
         {
-            velocity.y = -2f; // Keep player grounded
+            velocity.y = -2f;
         }
 
-        // Handle movement via WASD keys directly
         Vector3 move = Vector3.zero;
         if (Input.GetKey(KeyCode.W)) move += transform.forward;
         if (Input.GetKey(KeyCode.S)) move -= transform.forward;
         if (Input.GetKey(KeyCode.A)) move -= transform.right;
         if (Input.GetKey(KeyCode.D)) move += transform.right;
 
-        move.Normalize(); // prevent faster diagonal movement
+        move.Normalize();
         controller.Move(move * moveSpeed * Time.deltaTime);
 
-        // Jumping
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
         {
             velocity.y = Mathf.Sqrt(jumpForce * -2f * gravity);
             hasJumped = true;
         }
 
-        velocity.y += gravity * Time.deltaTime;
+        velocity += Physics.gravity * Time.deltaTime;
+
         controller.Move(velocity * Time.deltaTime);
 
-        // Animation flags
         bool isRunning = move.magnitude > 0;
         isFalling = !isGrounded;
 

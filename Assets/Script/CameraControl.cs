@@ -30,8 +30,6 @@ public class CameraControl : MonoBehaviour
 
         yRotation += mouseX;
         xRotation -= mouseY;
-        Debug.Log(xRotation);
-        Debug.Log(yRotation);
         xRotation = Mathf.Clamp(xRotation, maxLookDownAngle, maxLookUpAngle);
 
         transform.position = Vector3.Lerp(transform.position, cameraPoint.position + cameraPoint.TransformDirection(cameraOffset)
