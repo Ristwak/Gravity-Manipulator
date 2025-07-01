@@ -12,11 +12,6 @@ public class CameraControl : MonoBehaviour
     private float xRotation = 0f;
     private float yRotation = 0f;
 
-    void Awake()
-    {
-        transform.localPosition = cameraOffset;
-    }
-
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -32,24 +27,14 @@ public class CameraControl : MonoBehaviour
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, maxLookDownAngle, maxLookUpAngle);
 
-        transform.position = Vector3.Lerp(transform.position, cameraPoint.position + cameraPoint.TransformDirection(cameraOffset)
-        ,Time.deltaTime * 10f);
-        transform.rotation = Quaternion.Euler(xRotation, yRotation, 0f);
-        player.transform.rotation = Quaternion.Euler(0f, yRotation, 0f);
-        AdjustCameraPosition();
-    }
+        // Local rotation
+        transform.localRotation = Quaternion.Euler(xRotation, yRotation, 0f);
 
-    private void AdjustCameraPosition()
-    {
-        Vector3 targetPosition = cameraPoint.position + cameraPoint.TransformDirection(cameraOffset);
+        // Position behind the player
+        Vector3 targetPos = cameraPoint.position + cameraPoint.TransformDirection(cameraOffset);
+        transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * 10f);
 
-        if (Physics.Linecast(cameraPoint.position, targetPosition, out RaycastHit hit))
-        {
-            transform.position = hit.point;
-        }
-        else
-        {
-            transform.position = targetPosition;
-        }
+        // Optional: Adjust player facing direction
+        // player.rotation = Quaternion.Euler(0f, yRotation, 0f);
     }
 }

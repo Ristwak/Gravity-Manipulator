@@ -1,56 +1,52 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody))]
 public class PlayerController : MonoBehaviour
 {
     public float moveSpeed = 5f;
-    public float jumpForce = 3f;
-    public float gravity = -9.81f;
+    public float jumpForce = 5f;
 
-    private CharacterController controller;
+    private Rigidbody rb;
     private Animator animator;
-    private Vector3 velocity;
-    public bool isGrounded;
-    public bool hasJumped;
-    public bool isFalling;
+
+    public Vector3 gravityDirection = Vector3.down; // Can be updated from outside (e.g., from GravityManager)
+    private bool isGrounded;
+
+    public Transform groundCheck;
+    public float groundCheckRadius = 0.3f;
+    public LayerMask groundLayer;
 
     void Start()
     {
-        controller = GetComponent<CharacterController>();
+        rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
+        rb.freezeRotation = true;
     }
 
-    void Update()
+    void FixedUpdate()
     {
-        isGrounded = controller.isGrounded;
+        // Ground check using sphere cast
+        isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundLayer);
 
-        if (isGrounded && velocity.y < 0)
-        {
-            velocity.y = -2f;
-        }
+        Vector3 moveDir = Vector3.zero;
+        if (Input.GetKey(KeyCode.W)) moveDir += transform.forward;
+        if (Input.GetKey(KeyCode.S)) moveDir -= transform.forward;
+        if (Input.GetKey(KeyCode.A)) moveDir -= transform.right;
+        if (Input.GetKey(KeyCode.D)) moveDir += transform.right;
 
-        Vector3 move = Vector3.zero;
-        if (Input.GetKey(KeyCode.W)) move += transform.forward;
-        if (Input.GetKey(KeyCode.S)) move -= transform.forward;
-        if (Input.GetKey(KeyCode.A)) move -= transform.right;
-        if (Input.GetKey(KeyCode.D)) move += transform.right;
+        moveDir.Normalize();
 
-        move.Normalize();
-        controller.Move(move * moveSpeed * Time.deltaTime);
+        Vector3 moveVelocity = moveDir * moveSpeed;
+        Vector3 velocityOnPlane = Vector3.ProjectOnPlane(rb.linearVelocity, -gravityDirection);
+        Vector3 velocity = moveVelocity + Vector3.Project(rb.linearVelocity, gravityDirection); // Preserve vertical speed
+        rb.linearVelocity = velocity;
 
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
         {
-            velocity.y = Mathf.Sqrt(jumpForce * -2f * gravity);
-            hasJumped = true;
+            rb.linearVelocity += Vector3.up * jumpForce;
         }
 
-        velocity += Physics.gravity * Time.deltaTime;
-
-        controller.Move(velocity * Time.deltaTime);
-
-        bool isRunning = move.magnitude > 0;
-        isFalling = !isGrounded;
-
-        animator.SetBool("isRunning", isRunning);
-        animator.SetBool("isFalling", isFalling);
+        animator.SetBool("isRunning", moveDir.magnitude > 0);
+        animator.SetBool("isFalling", !isGrounded);
     }
 }

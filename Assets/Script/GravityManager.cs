@@ -1,19 +1,34 @@
 using UnityEngine;
+using System.Collections;
 
 public class GravityManager : MonoBehaviour
 {
     public float gravityStrength = 9.81f;
+    public float fallForce = 20f;
     public GameObject hologramPrefab;
+    public float hologramHeight = 2f;
 
-    private Vector3 newGravityDirection = Vector3.down;
+    public Transform headTransform;
+    public float topAngle = 180f;
+    public float downAngle = 0f;
+    public float leftAngle = 90f;
+    public float rightAngle = -90f;
+
     private GameObject hologramInstance;
+    public Camera mainCamera;
     private bool previewActive = false;
+    private Vector3 targetGravity = Vector3.down;
+    private Rigidbody rb;
+    private bool isRotating = false;
 
-    private Vector3 gravityDir = Vector3.down;
-    private float hologramRotationZ = 0f;
+    private bool left;
+    private bool right;
+    private bool top;
+    private bool down;
 
     void Start()
     {
+        rb = GetComponent<Rigidbody>();
         if (hologramPrefab)
         {
             hologramInstance = Instantiate(hologramPrefab, transform.position, Quaternion.identity);
@@ -23,58 +38,103 @@ public class GravityManager : MonoBehaviour
 
     void Update()
     {
+        if (isRotating) return;
+
         if (Input.GetKeyDown(KeyCode.UpArrow))
-            SetPreview(new Vector3(0, 1, 0), 180f);
-        else if (Input.GetKeyDown(KeyCode.DownArrow))
-            SetPreview(new Vector3(0, -1, 0), 0f);
-        else if (Input.GetKeyDown(KeyCode.LeftArrow))
-            SetPreview(new Vector3(-1, 0, 0), 90f);
-        else if (Input.GetKeyDown(KeyCode.RightArrow))
-            SetPreview(new Vector3(1, 0, 0), -90f);
-
-        if (Input.GetKeyDown(KeyCode.Return) && previewActive)
         {
-            Physics.gravity = gravityDir.normalized * gravityStrength;
-            Debug.Log("Gravity set to: " + Physics.gravity);
-
+            SetPreview(Vector3.up);
+            top = true; down = left = right = false;
+        }
+        else if (Input.GetKeyDown(KeyCode.DownArrow))
+        {
+            SetPreview(Vector3.down);
+            down = true; top = left = right = false;
+        }
+        else if (Input.GetKeyDown(KeyCode.LeftArrow))
+        {
+            SetPreview(Vector3.left);
+            left = true; right = top = down = false;
+        }
+        else if (Input.GetKeyDown(KeyCode.RightArrow))
+        {
+            SetPreview(Vector3.right);
+            right = true; left = top = down = false;
+        }
+        else if (Input.GetKeyDown(KeyCode.Return) && previewActive)
+        {
+            ApplyGravity();
+            // RotateAroundHead();
+            previewActive = false;
             if (hologramInstance)
                 hologramInstance.SetActive(false);
-
-            previewActive = false;
-
-            ApplyPlayerOffset(gravityDir);
         }
 
         if (previewActive && hologramInstance)
         {
-            float height = 2f;
-            Vector3 headOffset = new Vector3(0, height, 0);
-            hologramInstance.transform.position = transform.position + headOffset;
+            hologramInstance.transform.position = transform.position + Vector3.up * hologramHeight;
+            hologramInstance.transform.rotation = Quaternion.FromToRotation(Vector3.down, targetGravity);
         }
     }
 
-    void SetPreview(Vector3 direction, float rotationZ)
+    void ApplyGravity()
     {
-        gravityDir = direction.normalized;
-        hologramRotationZ = rotationZ;
+        Vector3 currentGravity = Physics.gravity.normalized;
+        Vector3 newGravity = Vector3.zero;
+        Vector3 rotationAxis = Vector3.zero;
+        float rotationAngle = 0f;
+
+        if (top)
+        {
+            newGravity = Vector3.up;
+            rotationAxis = Vector3.forward;
+            rotationAngle = topAngle;
+        }
+        else if (down)
+        {
+            newGravity = Vector3.down;
+            rotationAxis = Vector3.back;
+            rotationAngle = downAngle;
+        }
+        else if (left)
+        {
+            newGravity = Vector3.left;
+            rotationAxis = Vector3.left;
+            rotationAngle = leftAngle;
+        }
+        else if (right)
+        {
+            newGravity = Vector3.right;
+            rotationAxis = Vector3.right;
+            rotationAngle = rightAngle;
+        }
+
+        if (currentGravity != newGravity)
+        {
+            rb.freezeRotation = false;
+            Physics.gravity = newGravity * gravityStrength;
+            transform.RotateAround(headTransform.position, rotationAxis, rotationAngle);
+            mainCamera.transform.RotateAround(headTransform.position, rotationAxis, rotationAngle);
+
+            rb.freezeRotation = true;
+            Debug.Log("Gravity applied: " + Physics.gravity);
+        }
+        else
+        {
+            Debug.Log("Gravity direction unchanged. No rotation applied.");
+        }
+    }
+
+
+    void SetPreview(Vector3 direction)
+    {
+        targetGravity = direction.normalized;
         previewActive = true;
 
         if (hologramInstance)
         {
             hologramInstance.SetActive(true);
-
-            float height = 2f;
-            Vector3 headOffset = new Vector3(0, height, 0);
-            hologramInstance.transform.position = transform.position + headOffset;
-
-            Quaternion zTilt = Quaternion.AngleAxis(rotationZ, Vector3.forward);
-            hologramInstance.transform.rotation = zTilt;
+            hologramInstance.transform.position = transform.position + Vector3.up * hologramHeight;
+            hologramInstance.transform.rotation = Quaternion.FromToRotation(Vector3.down, targetGravity);
         }
-    }
-
-    void ApplyPlayerOffset(Vector3 direction)
-    {
-        float offsetDistance = 2f;
-        transform.position += direction.normalized * offsetDistance;
     }
 }
